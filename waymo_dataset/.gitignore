@@ -1,0 +1,15 @@
+# Raw parquet downloads (large, re-downloadable)
+raw/
+*.parquet
+
+# Extracted data (regenerate with extract_waymo.py)
+extracted/
+WaymoDataset/
+
+# Visualisation outputs
+vis/
+*.png
+
+# Python cache
+__pycache__/
+*.pyc
