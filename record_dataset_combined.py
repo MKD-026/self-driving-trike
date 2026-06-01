@@ -62,8 +62,11 @@ MXID_TO_CID = {
 }
 CID_ROLE = {0: "LEFT", 1: "CENTER", 2: "RIGHT"}
 
-# Path to the caliscope inter-camera calibration we want to archive alongside
-CALISCOPE_TOML = Path("/home/dhruvil/BEV/caliscope_ws/camera_array.toml")
+# Caliscope inter-camera calibration candidates to archive alongside each run.
+CALISCOPE_TOML_CANDIDATES = (
+    Path(__file__).with_name("camera_array.toml"),
+    Path("/home/dhruvil/BEV/caliscope_ws/camera_array.toml"),
+)
 
 STREAMS = ("rgb", "mono_left", "mono_right", "depth")
 
@@ -98,6 +101,8 @@ class CamRuntime:
     latest: dict[str, StreamFrame] = field(default_factory=dict)
     latest_imu: IMUSample | None  = None
     ready:  threading.Event      = field(default_factory=threading.Event)
+    failed: bool = False
+    error: str = ""
 
 
 @dataclass
@@ -276,13 +281,19 @@ def capture_thread(rt: CamRuntime,
     try:
         device = dai.Device(rt.info)
     except Exception as e:
+        rt.failed = True
+        rt.error = str(e)
+        rt.ready.set()
         print(f"[cam{rt.cid}] open failed: {e}")
         return
 
     # OAK factory calibration (before pipeline start)
     try:
         cal_path = run_dir / "calibration" / f"oak_{rt.mxid}.json"
-        cal_path.write_text(device.readCalibration().eepromToJson())
+        calibration_json = device.readCalibration().eepromToJson()
+        if not isinstance(calibration_json, str):
+            calibration_json = json.dumps(calibration_json, indent=2)
+        cal_path.write_text(calibration_json)
         print(f"[cal] cam{rt.cid} → {cal_path.name}")
     except Exception as e:
         print(f"[cal] cam{rt.cid} save failed: {e}")
@@ -291,6 +302,9 @@ def capture_thread(rt: CamRuntime,
         pipeline, q_rgb, q_monoL, q_monoR, q_depth, q_imu = make_pipeline(
             device, width, height, fps)
     except Exception as e:
+        rt.failed = True
+        rt.error = str(e)
+        rt.ready.set()
         print(f"[cam{rt.cid}] pipeline failed: {e}")
         return
 
@@ -372,11 +386,13 @@ def make_run_dir(root: Path) -> Path:
 
 def copy_caliscope(run_dir: Path):
     target = run_dir / "calibration" / "caliscope_camera_array.toml"
-    if CALISCOPE_TOML.exists():
-        shutil.copy(CALISCOPE_TOML, target)
-        print(f"[cal] caliscope → {target.name}")
-    else:
-        print(f"[cal] caliscope file not found at {CALISCOPE_TOML}")
+    for source in CALISCOPE_TOML_CANDIDATES:
+        if source.exists():
+            shutil.copy(source, target)
+            print(f"[cal] caliscope → {target.name} ({source})")
+            return
+    searched = ", ".join(str(path) for path in CALISCOPE_TOML_CANDIDATES)
+    print(f"[cal] caliscope file not found; searched: {searched}")
 
 
 def snapshot(runtimes):
@@ -469,6 +485,7 @@ def save_snapshot(snap, run_dir: Path, idx: int,
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main() -> int:
+    global _running
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--root", type=str, default="dataset",
@@ -528,9 +545,40 @@ def main() -> int:
 
     # Wait for all cameras to be ready (device open + pipeline started)
     print("[rec] waiting for pipelines to start...")
+    try:
+        deadline = time.time() + 15
+        while time.time() < deadline:
+            if all(rt.ready.is_set() for rt in runtimes):
+                break
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        _running = False
+        print("\n[rec] interrupted during startup")
+        for t in threads:
+            t.join(timeout=3)
+        return 130
+
+    active_runtimes = []
     for rt in runtimes:
-        if not rt.ready.wait(timeout=15):
+        if rt.failed:
+            print(f"[err] cam{rt.cid} failed: {rt.error}")
+        elif not rt.ready.is_set():
+            rt.failed = True
+            rt.error = "startup timeout"
             print(f"[err] cam{rt.cid} did not start")
+        else:
+            active_runtimes.append(rt)
+
+    if not active_runtimes:
+        _running = False
+        print("[err] no cameras started; stopping")
+        for t in threads:
+            t.join(timeout=3)
+        return 1
+    if len(active_runtimes) != len(runtimes):
+        active_ids = ", ".join(f"cam{rt.cid}" for rt in active_runtimes)
+        print(f"[rec] continuing with active cameras: {active_ids}")
+    runtimes = active_runtimes
 
     # Wait until every stream has at least one frame
     print("[rec] waiting for first frame on every stream...")
@@ -607,7 +655,6 @@ def main() -> int:
     next_save = time.time()
     frame_idx = 0
 
-    global _running
     try:
         while _running:
             now = time.time()
