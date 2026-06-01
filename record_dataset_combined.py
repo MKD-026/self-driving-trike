@@ -479,8 +479,12 @@ def main() -> int:
                     help="Stop after N seconds (0 = until Q pressed)")
     ap.add_argument("--width",  type=int, default=640)
     ap.add_argument("--height", type=int, default=400)
-    ap.add_argument("--phone-sensors", action=argparse.BooleanOptionalAction, default=True,
-                    help="Record Android phone GPS/IMU over ADB TCP forwarding (default: enabled)")
+    phone_group = ap.add_mutually_exclusive_group()
+    phone_group.add_argument("--phone-sensors", dest="phone_sensors", action="store_true",
+                             help="Record Android phone GPS/IMU over ADB TCP forwarding")
+    phone_group.add_argument("--no-phone-sensors", dest="phone_sensors", action="store_false",
+                             help="Disable Android phone GPS/IMU recording")
+    ap.set_defaults(phone_sensors=True)
     ap.add_argument("--phone-port", type=int, default=5000,
                     help="ADB-forwarded TCP port used by the phone sensor service")
     args = ap.parse_args()
