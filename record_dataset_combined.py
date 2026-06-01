@@ -32,7 +32,7 @@ Usage
 -----
   python record_dataset.py
   python record_dataset.py --fps 15 --duration 30
-  python record_dataset.py --root /data/oak_runs --width 1280 --height 800
+  python record_dataset.py --save-location /media/h2x/FD27-E81F --width 1280 --height 800
 """
 from __future__ import annotations
 
@@ -488,8 +488,15 @@ def main() -> int:
     global _running
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--root", type=str, default="dataset",
-                    help="Root folder for all runs (default: ./dataset)")
+    ap.add_argument(
+        "--root",
+        "--save-location",
+        "--save-root",
+        dest="root",
+        type=str,
+        default="dataset",
+        help="Root folder for timestamped run folders, e.g. /media/h2x/FD27-E81F (default: ./dataset)",
+    )
     ap.add_argument("--fps", type=float, default=10.0,
                     help="Save rate in Hz (default 10)")
     ap.add_argument("--duration", type=float, default=0.0,
