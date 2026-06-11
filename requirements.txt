@@ -1,0 +1,6 @@
+# Bike TTS voice module — Python dependencies
+# Install with:  pip install -r requirements.txt
+#
+# piper-tts pulls in its own runtime (onnxruntime, numpy). Pinned to the
+# version this module was built and tested against.
+piper-tts==1.4.2

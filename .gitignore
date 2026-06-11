@@ -1,0 +1,14 @@
+# Piper voice models are large (~60 MB each) and downloadable — do NOT commit.
+# Each teammate fetches them locally via download_voice.sh (see README).
+voices/
+*.onnx
+*.onnx.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# scratch audio
+*.wav
