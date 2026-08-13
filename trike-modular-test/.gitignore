@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+sift_panorama_cache.json
+.venv/
+

@@ -1,0 +1,22 @@
+{
+  "camera_order": {"cam0": "left", "cam1": "center", "cam2": "right"},
+  "requested_homography_frame": 1066,
+  "selected_homography_frame": 300,
+  "work_scale": 0.6,
+  "camera_hfov_deg": 72.0,
+  "ratio": 0.75,
+  "ransac": 4.0,
+  "auto_best_step": 100,
+  "recompute_every": 0,
+  "smooth_alpha": 0.35,
+  "min_inliers": 20,
+  "min_inlier_ratio": 0.45,
+  "blend_width": 6.0,
+  "center_priority": 2.2,
+  "exposure_match": true,
+  "output_width": 1120,
+  "output_height": 416,
+  "fit_mode": "stretch",
+  "left_to_center": [[1.0058525911178433, -0.0102904485433782, -222.06767925424], [-0.012331990595697428, 0.9940333355300491, 9.941476728049215], [0.0, 0.0, 1.0]],
+  "right_to_center": [[1.002593461148898, 0.036540305130432826, 231.79639603508483], [-0.01888946975883002, 1.0157667208826933, 9.890395889840839], [0.0, 0.0, 1.0]]
+}

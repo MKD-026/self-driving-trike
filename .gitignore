@@ -1,0 +1,9 @@
+
+# Modular pipeline generated files
+trike-modular-test/models/
+trike-modular-test/outputs/
+trike-modular-test/__pycache__/
+trike-modular-test/**/*.pyc
+trike-modular-test/*.log
+trike-modular-test/*.orig
+trike-modular-test/sift_panorama_cache.json
